@@ -10,7 +10,7 @@ class mePRODLMM:
         self.reports = open(f'{location}/reports.txt','w+')
         self.status = ''
 
-    def engine(self, psms, conditions, pairs):
+    def engine(self, psms, conditions, pairs, normalization_type):
         channels = [col for col in psms.columns if 'Abundance:' in col]
 
         if channels == []:
@@ -41,15 +41,19 @@ class mePRODLMM:
         else:
             return 0
 
-        print(baselineIndex)
-
         process = mePROD.PD_input(psms)
         # process.IT_adjustment()
         # process.total_intensity_normalisation()
         # process.filter_peptides() # earlier filter peptides after total intensity normalisation
         process.IT_adjustment()
         process.filter_peptides() # filter peptides before total intensity normalisation 19062023
-        process.total_intensity_normalisation()
+
+        if normalization_type == 'total':
+            process.total_intensity_normalisation()
+        elif normalization_type == 'TMM':
+            process.TMM()
+        elif normalization_type == 'median':
+            process.Median_normalisation()
 
         self.reports.write('The number of total peptides: {}\n'.format(len(psms.index)))
 

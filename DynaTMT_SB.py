@@ -36,6 +36,7 @@ class PD_input:
         in the class variable self.input_file.
         '''
         self.input_file = input
+
     def filter_peptides(self):
         input_file1 = self.input_file
         input_file1 = input_file1[~input_file1['Master Protein Accessions'].str.contains(';',na=False)]
@@ -66,7 +67,6 @@ class PD_input:
         input[channels]=input[channels].multiply(1000)
         print("Done")
         self.input_file = input
-        
 
     def extract_heavy (self):
         '''This function takes the class variable self.input_file dataframe and extracts all heavy labelled peptides. Naming of the 
@@ -84,7 +84,6 @@ class PD_input:
 
         print("Extraction Done","Extracted Peptides:", len(Heavy_peptides))
         return Heavy_peptides
-
 
     def extract_light (self):
         '''This function takes the class variable self.input_file dataframe and extracts all light labelled peptides. Naming of the 
@@ -307,7 +306,6 @@ class PD_input:
 
         return protein_df
 
-
     def sum_peptides_for_proteins(self,input_file):
         '''This function takes a peptide/PSM level DataFrame stored in self.input_file and performs Protein quantification rollup based
         on the sum of all corresponding peptides.
@@ -333,7 +331,6 @@ class PD_input:
         protein_df=pd.DataFrame.from_dict(result, orient='index',columns=channels)
         print("Combination done")
         return protein_df[channels]
-
 
     def log2(self):
         '''Modifies self.input_file and log2 transforms all TMT intensities.

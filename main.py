@@ -1,3 +1,10 @@
+__author__ = "Süleyman Bozkurt"
+__version__ = "v1.7"
+__maintainer__ = "Süleyman Bozkurt"
+__email__ = "sbozkurt.mbg@gmail.com"
+__date__ = '18.01.2022'
+__update__ = '15.08.2023'
+
 # import time
 # import pandas as pd
 import os
@@ -18,8 +25,21 @@ class MyWindow():
         global root
         root=parent
 
+        # normalisation variables: Total intensity normalisation, Median intensity normalisation, TMM
+        self.browseLabel = Label(self.frame, font=Font(family="Times New Roman", size=12), text="Choose a Normalization method:")
+        self.browseLabel.place(x = 560, y = 30)
+
         self.fontRadio = Font(family="Times New Roman", size=13)
-        self.var = StringVar()
+        self.normVar = StringVar()
+        self.total = Radiobutton(root, font=self.fontRadio,  text="Total intensity", value="total", variable=self.normVar)
+        self.total.select()
+        self.total.place(x=520, y=60)
+
+        self.median = Radiobutton(root, font=self.fontRadio,  text="Median", value="median", variable=self.normVar)
+        self.median.place(x=650, y=60)
+
+        self.TMM = Radiobutton(root, font=self.fontRadio, text="TMM", value="TMM", variable=self.normVar)
+        self.TMM.place(x=730, y=60)
 
         ####### Browse label and button ######
         self.browseLabel = Label(self.frame, font=Font(family="Times New Roman", size=12), text="Please, choose a PSMs:")
@@ -52,7 +72,7 @@ class MyWindow():
         self.browseButtonPairs.place(x = 520, y = 210)
 
         self.statusbar = ScrolledText(self.frame, state='disabled')
-        self.statusbar.place(x=100, y=280, width=650, height=180)
+        self.statusbar.place(x=100, y=280, width=670, height=180)
 
         self.runbutton = Button(self.frame, text='RUN', fg='black', bg='#b4e67e',
                                 font=Font(family="Times New Roman", size=18, weight='bold'), command=self.runbutton_click)
@@ -65,7 +85,7 @@ class MyWindow():
 
         self.frame.pack()
 
-        self.update_status_box('\n\t >> :: mePROD LMM Bot Started! :: <<\n')
+        self.update_status_box('\n\t\t\t >> :: mePROD LMM Bot Started! :: <<\n')
         self.update_status_box('\n------------------------------------------------------------------------------\n')
 
     def Message(self, title, message):
@@ -99,7 +119,7 @@ class MyWindow():
         if self.filenamePretify == "None":
             self.Message('Error!', 'Please choose a file!')
             return 0
-        self.update_status_box(f'\n "{self.filenamePretify}" file is chosen! \n')
+        self.update_status_box(f'\n\t "{self.filenamePretify}" file is chosen! \n')
 
         self.outputLocationPath =  str(self.filename).split("'")[1].replace(str(self.filename).split("'")[1].split("/")[-1],'')
 
@@ -137,17 +157,17 @@ class MyWindow():
 
     def engine(self):
         try:
-            self.update_status_box(f'\n The file is reading..! \n')
+            self.update_status_box(f'\n\t The file is reading..! \n')
             if '.xlsx' in self.filenamePretify:
                 self.fileRead = pd.read_excel(self.outputLocationPath+self.filenamePretify)
             elif '.txt' in self.filenamePretify:
                 self.fileRead = pd.read_csv(self.outputLocationPath+self.filenamePretify,sep='\t',header=0)
         except Exception as e:
-            self.update_status_box(f'\n Error is "{e}"! \n')
+            self.update_status_box(f'\n\t Error is "{e}"! \n')
             self.Message('Error!', 'An Error Occured, please choose a file before run!')
             return 0
 
-        self.update_status_box(f'\n The file is read! \n')
+        self.update_status_box(f'\n\t The file is read! \n')
 
         # conditions = ['Light', '0DMSO', '0DMSO', '0DMSO', 'Rotenone', 'Rotenone', 'Rotenone', 'Antimycin', 'Antimycin', 'Antimycin', 'Boost']
         self.conditions = self.conditionbox.get("1.0", END)
@@ -170,28 +190,32 @@ class MyWindow():
         pairsFinal[-1] = pairsFinal[-1].strip()
         pairsFinal = [i.strip() for i in pairsFinal]
         pairsFinal = [i.lstrip() for i in pairsFinal]
-        #[print(x) for x in thislist]
         pairsFinal = [pairs.split('/') for pairs in pairsFinal]
 
-        self.update_status_box(f'\n Conditions: {self.conditions.strip()} \n')
+        normalization_type = self.normVar.get()
 
-        self.update_status_box(f'\n Pairs: {self.pairs.strip()} \n')
+        self.update_status_box(f'\n\t Conditions: {self.conditions.strip()} \n')
 
-        self.update_status_box(f'\n Running..! \n')
+        self.update_status_box(f'\n\t Pairs: {self.pairs.strip()} \n')
+
+        self.update_status_box(f'\n\t Normalization: {normalization_type.strip()} \n')
+
+        self.update_status_box(f'\n\t Running..! \n')
 
         meprod_LMM = mePRODLMM(self.outputLocationPath)
 
-        self.data = meprod_LMM.engine(self.fileRead, conditionsFinal, pairsFinal)
+        self.data = meprod_LMM.engine(self.fileRead, conditionsFinal, pairsFinal, normalization_type)
+
         try:
             if self.data == 0:
-                self.update_status_box(f'\n Error is Baseline channel! \n')
+                self.update_status_box(f'\n\t Error is Baseline channel! \n')
                 self.Message('Error!', 'Please provide light/baseline channel!')
                 return 0
         except:
             pass
 
-        self.update_status_box(f'\n Completed..! \n')
-        self.update_status_box(f'\n Data is saving..! \n')
+        self.update_status_box(f'\n\t Completed..! \n')
+        self.update_status_box(f'\n\t Data is saving..! \n')
 
         self.outputLocation = self.outputNamebox.get("1.0", END)
 
@@ -202,12 +226,12 @@ class MyWindow():
             self.data = meprod_LMM.mito_human(self.data)
             self.data.to_excel(f'{self.outputLocationPath}/{self.outputLocation.strip()}.xlsx', index=False,
                                engine="openpyxl")
-            self.update_status_box(f'\n Saved as {self.outputLocation.strip()}! \n')
+            self.update_status_box(f'\n\t Saved as {self.outputLocation.strip()}! \n')
             self.Message('Finished!', 'Application Completed!')
             self.openbutton.configure(state='normal')
             self.runbutton.configure(state='normal')
         except Exception as e:
-            self.update_status_box(f'\n Error is "{e}"! \n')
+            self.update_status_box(f'\n\t Error is "{e}"! \n')
             self.Message('Error!', 'An Error Occured, please fix it and rerun!')
 
 if __name__ == '__main__':
@@ -215,7 +239,7 @@ if __name__ == '__main__':
     root = Tk()
     # root.iconbitmap('files//icon.ico')
 
-    root.title("mePROD LMM App v1.6 by S. Bozkurt @2023")
+    root.title("mePROD LMM App v1.7 by S. Bozkurt @2023")
     root.geometry("840x560")
     root.resizable(0, 0)
 
