@@ -1,0 +1,7 @@
+SB117_import_lmm_test
+
+condtions:
+Light,Cont,Cont,Cont,2h,2h,2h,6h,6h,6h,16h,16h,16h,24h,24h,Boost,24h,skip
+
+pairs:
+2h/Cont; 6h/Cont; 16h/Cont; 24h/Cont
