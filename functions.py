@@ -1,16 +1,16 @@
 import warnings
-import DynaTMT_SB as mePROD
-import pbLMM_SB as LMM
+import DynaTMT_SB as DynaTMT
+import pbLMM_SB as statisticsGetter
 import requests
 import pandas as pd
 warnings.filterwarnings("ignore")
 
-class mePRODLMM:
+class mePROD:
     def __init__(self, location):
         self.reports = open(f'{location}/reports.txt','w+')
         self.status = ''
 
-    def engine(self, psms, conditions, pairs, normalization_type):
+    def engine(self, psms, conditions, pairs, normalization_type, statistics_type):
         channels = [col for col in psms.columns if 'Abundance:' in col]
 
         if channels == []:
@@ -41,7 +41,7 @@ class mePRODLMM:
         else:
             return 0
 
-        process = mePROD.PD_input(psms)
+        process = DynaTMT.PD_input(psms)
         # process.IT_adjustment()
         # process.total_intensity_normalisation()
         # process.filter_peptides() # earlier filter peptides after total intensity normalisation
@@ -69,8 +69,6 @@ class mePRODLMM:
         #conditions=['Light','0DMSO','0DMSO','0DMSO','Rotenone','Rotenone','Rotenone','Antimycin','Antimycin','Antimycin','Boost']
         #pairs=[['0DMSO','Rotenone'], ['0DMSO','Antimycin']]
 
-        hypo = LMM.HypothesisTesting()
-
         conditions = [i.strip() for i in conditions]
         conditions = [i.lstrip() for i in conditions]
 
@@ -83,7 +81,13 @@ class mePRODLMM:
         if pairs == [['']]:
             pairs = None
         #print(pairs)
-        result = hypo.peptide_based_lmm(peptide_data,conditions=conditions,pairs=pairs,norm=None)
+
+        hypo = statisticsGetter.HypothesisTesting()
+
+        if statistics_type == 'LMM':
+            result = hypo.peptide_based_lmm(peptide_data,conditions=conditions,pairs=pairs)
+        elif statistics_type == 'ttest':
+            result = hypo.ttest(peptide_data, conditions=conditions, pairs=pairs)
 
         result = result.rename(columns=columnDict)
         self.reports.write('The number of heavy proteins: {}\n'.format(len(result.index)))

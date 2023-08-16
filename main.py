@@ -1,9 +1,9 @@
 __author__ = "Süleyman Bozkurt"
-__version__ = "v1.7"
+__version__ = "v1.9"
 __maintainer__ = "Süleyman Bozkurt"
 __email__ = "sbozkurt.mbg@gmail.com"
 __date__ = '18.01.2022'
-__update__ = '15.08.2023'
+__update__ = '17.08.2023'
 
 # import time
 # import pandas as pd
@@ -23,23 +23,33 @@ class MyWindow():
         self.font = Font(family="Times New Roman", size=16)
         self.request_timeout = 30
         global root
-        root=parent
+        root = parent
 
         # normalisation variables: Total intensity normalisation, Median intensity normalisation, TMM
-        self.browseLabel = Label(self.frame, font=Font(family="Times New Roman", size=12), text="Choose a Normalization method:")
-        self.browseLabel.place(x = 560, y = 30)
+        Label(self.frame, font=Font(family="Times New Roman", size=12), text="Normalization Method").place(x = 600, y = 5)
 
         self.fontRadio = Font(family="Times New Roman", size=13)
         self.normVar = StringVar()
-        self.total = Radiobutton(root, font=self.fontRadio,  text="Total intensity", value="total", variable=self.normVar)
-        self.total.select()
-        self.total.place(x=520, y=60)
+        self.totalRadio = Radiobutton(root, font=self.fontRadio,  text="Total intensity", value="total", variable=self.normVar)
+        self.totalRadio.select()
+        self.totalRadio.place(x=520, y=30)
 
-        self.median = Radiobutton(root, font=self.fontRadio,  text="Median", value="median", variable=self.normVar)
-        self.median.place(x=650, y=60)
+        self.medianRadio = Radiobutton(root, font=self.fontRadio,  text="Median", value="median", variable=self.normVar)
+        self.medianRadio.place(x=650, y=30)
 
-        self.TMM = Radiobutton(root, font=self.fontRadio, text="TMM", value="TMM", variable=self.normVar)
-        self.TMM.place(x=730, y=60)
+        self.TMMRadio = Radiobutton(root, font=self.fontRadio, text="TMM", value="TMM", variable=self.normVar)
+        self.TMMRadio.place(x=740, y=30)
+
+        ####### Statistics method chosen! ######
+        Label(self.frame, font=Font(family="Times New Roman", size=12), text="Statistical Method").place(x = 610, y = 70)
+
+        self.statisticVar = StringVar()
+        self.LMMRadio = Radiobutton(root, font=self.fontRadio,  text="Linear mix model", value="LMM", variable=self.statisticVar)
+        self.LMMRadio.select()
+        self.LMMRadio.place(x=520, y=95)
+
+        self.ttestRadio = Radiobutton(root, font=self.fontRadio,  text="Unpaired t-test", value="ttest", variable=self.statisticVar)
+        self.ttestRadio.place(x=680, y=95)
 
         ####### Browse label and button ######
         self.browseLabel = Label(self.frame, font=Font(family="Times New Roman", size=12), text="Please, choose a PSMs:")
@@ -47,45 +57,45 @@ class MyWindow():
         self.browseButton = Button(self.frame, text="Browse", justify=LEFT, font=Font(family="Times New Roman", size=12, weight='bold'), command=self.browse)
         self.browseButton.place(x = 240, y = 25)
 
-        Label(self.frame, text="Output Name:", font=Font(family="Times New Roman", size=12)).place(x=80, y=80)
+        Label(self.frame, text="Output Name:", font=Font(family="Times New Roman", size=12)).place(x=80, y=85)
         self.outputNamebox = ScrolledText(self.frame, font=Font(family="Times New Roman", size=12), bd=2)
-        self.outputNamebox.place(x=180, y=75, width=320, height=40)
+        self.outputNamebox.place(x=180, y=80, width=320, height=40)
 
-        Label(self.frame, text="Conditions:", font=Font(family="Times New Roman", size=12)).place(x=100, y=130)
+        Label(self.frame, text="Conditions:", font=Font(family="Times New Roman", size=12)).place(x=100, y=155)
         self.conditionbox = ScrolledText(self.frame, font=Font(family="Times New Roman", size=12), bd=2)
-        self.conditionbox.place(x=180, y=125, width=500, height=60)
+        self.conditionbox.place(x=180, y=140, width=500, height=60)
 
         condtionsFromText = open('condtions.txt').read()
         self.conditionbox.insert(END, condtionsFromText)
 
         self.browseButtonCondition = Button(self.frame, text="Browse", justify=LEFT, font=Font(family="Times New Roman", size=12, weight='bold'), command=self.browse_condition)
-        self.browseButtonCondition.place(x = 700, y = 132)
+        self.browseButtonCondition.place(x = 700, y = 147)
 
-        Label(self.frame, text="Pairs:", font=Font(family="Times New Roman", size=12)).place(x=130, y=210)
+        Label(self.frame, text="Pairs:", font=Font(family="Times New Roman", size=12)).place(x=130, y=230)
         self.pairsbox = ScrolledText(self.frame, font=Font(family="Times New Roman", size=12), bd=2)
-        self.pairsbox.place(x=180, y=200, width=320, height=60)
+        self.pairsbox.place(x=180, y=220, width=320, height=60)
 
         pairsFromText = open('pairs.txt').read()
         self.pairsbox.insert(END, pairsFromText)
 
         self.browseButtonPairs = Button(self.frame, text="Browse", justify=LEFT, font=Font(family="Times New Roman", size=12, weight='bold'), command=self.browse_pairs)
-        self.browseButtonPairs.place(x = 520, y = 210)
+        self.browseButtonPairs.place(x = 520, y = 230)
 
         self.statusbar = ScrolledText(self.frame, state='disabled')
-        self.statusbar.place(x=100, y=280, width=670, height=180)
+        self.statusbar.place(x=100, y=300, width=670, height=180)
 
         self.runbutton = Button(self.frame, text='RUN', fg='black', bg='#b4e67e',
                                 font=Font(family="Times New Roman", size=18, weight='bold'), command=self.runbutton_click)
-        self.runbutton.place(x=250, y=480, width=150, height=50)
+        self.runbutton.place(x=250, y=510, width=150, height=50)
 
         self.openbutton = Button(self.frame, text='Open', fg='black', bg='#FF5733',
                                 font=Font(family="Times New Roman", size=18, weight='bold'), command=self.open_click)
-        self.openbutton.place(x=450, y=480, width=150, height=50)
+        self.openbutton.place(x=450, y=510, width=150, height=50)
         self.openbutton.configure(state='disabled')
 
         self.frame.pack()
 
-        self.update_status_box('\n\t\t\t >> :: mePROD LMM Bot Started! :: <<\n')
+        self.update_status_box('\n\t\t >> :: mePROD LMM Bot Started! :: <<\n')
         self.update_status_box('\n------------------------------------------------------------------------------\n')
 
     def Message(self, title, message):
@@ -119,7 +129,7 @@ class MyWindow():
         if self.filenamePretify == "None":
             self.Message('Error!', 'Please choose a file!')
             return 0
-        self.update_status_box(f'\n\t "{self.filenamePretify}" file is chosen! \n')
+        self.update_status_box(f'\n"{self.filenamePretify}" file is chosen! \n')
 
         self.outputLocationPath =  str(self.filename).split("'")[1].replace(str(self.filename).split("'")[1].split("/")[-1],'')
 
@@ -157,17 +167,17 @@ class MyWindow():
 
     def engine(self):
         try:
-            self.update_status_box(f'\n\t The file is reading..! \n')
+            self.update_status_box(f'\n The file is reading..! \n')
             if '.xlsx' in self.filenamePretify:
                 self.fileRead = pd.read_excel(self.outputLocationPath+self.filenamePretify)
             elif '.txt' in self.filenamePretify:
                 self.fileRead = pd.read_csv(self.outputLocationPath+self.filenamePretify,sep='\t',header=0)
         except Exception as e:
-            self.update_status_box(f'\n\t Error is "{e}"! \n')
+            self.update_status_box(f'\n Error is "{e}"! \n')
             self.Message('Error!', 'An Error Occured, please choose a file before run!')
             return 0
 
-        self.update_status_box(f'\n\t The file is read! \n')
+        self.update_status_box(f'\n The file is read! \n')
 
         # conditions = ['Light', '0DMSO', '0DMSO', '0DMSO', 'Rotenone', 'Rotenone', 'Rotenone', 'Antimycin', 'Antimycin', 'Antimycin', 'Boost']
         self.conditions = self.conditionbox.get("1.0", END)
@@ -193,45 +203,50 @@ class MyWindow():
         pairsFinal = [pairs.split('/') for pairs in pairsFinal]
 
         normalization_type = self.normVar.get()
+        statistics_type = self.statisticVar.get()
 
-        self.update_status_box(f'\n\t Conditions: {self.conditions.strip()} \n')
+        self.update_status_box(f'\n Conditions: {self.conditions.strip()} \n')
 
-        self.update_status_box(f'\n\t Pairs: {self.pairs.strip()} \n')
+        self.update_status_box(f'\n Pairs: {self.pairs.strip()} \n')
 
-        self.update_status_box(f'\n\t Normalization: {normalization_type.strip()} \n')
+        self.update_status_box(f'\n Normalization: {normalization_type.strip()} \n')
 
-        self.update_status_box(f'\n\t Running..! \n')
+        self.update_status_box(f'\n Statistics: {statistics_type.strip()} \n')
 
-        meprod_LMM = mePRODLMM(self.outputLocationPath)
+        self.update_status_box(f'\n Running..! \n')
 
-        self.data = meprod_LMM.engine(self.fileRead, conditionsFinal, pairsFinal, normalization_type)
+        mePROD_class = mePROD(self.outputLocationPath)
+
+        self.data = mePROD_class.engine(self.fileRead, conditionsFinal, pairsFinal, normalization_type, statistics_type)
 
         try:
             if self.data == 0:
-                self.update_status_box(f'\n\t Error is Baseline channel! \n')
+                self.update_status_box(f'\n Error is Baseline channel! \n')
                 self.Message('Error!', 'Please provide light/baseline channel!')
                 return 0
         except:
             pass
 
-        self.update_status_box(f'\n\t Completed..! \n')
-        self.update_status_box(f'\n\t Data is saving..! \n')
+        self.update_status_box(f'\n Completed..! \n')
+        self.update_status_box(f'\n Data is saving..! \n')
 
         self.outputLocation = self.outputNamebox.get("1.0", END)
 
         try:
             self.data.to_excel(f'{self.outputLocationPath}/{self.outputLocation.strip()}.xlsx', index=False, engine="openpyxl")
+
             self.datamePROD = pd.read_excel(f'{self.outputLocationPath}/{self.outputLocation.strip()}.xlsx')
-            self.data = meprod_LMM.GeneNameEngine(self.datamePROD)
-            self.data = meprod_LMM.mito_human(self.data)
+            self.data = mePROD_class.GeneNameEngine(self.datamePROD)
+            self.data = mePROD_class.mito_human(self.data)
             self.data.to_excel(f'{self.outputLocationPath}/{self.outputLocation.strip()}.xlsx', index=False,
                                engine="openpyxl")
-            self.update_status_box(f'\n\t Saved as {self.outputLocation.strip()}! \n')
+
+            self.update_status_box(f'\n Saved as {self.outputLocation.strip()}! \n')
             self.Message('Finished!', 'Application Completed!')
             self.openbutton.configure(state='normal')
             self.runbutton.configure(state='normal')
         except Exception as e:
-            self.update_status_box(f'\n\t Error is "{e}"! \n')
+            self.update_status_box(f'\n Error is "{e}"! \n')
             self.Message('Error!', 'An Error Occured, please fix it and rerun!')
 
 if __name__ == '__main__':
@@ -239,7 +254,7 @@ if __name__ == '__main__':
     root = Tk()
     # root.iconbitmap('files//icon.ico')
 
-    root.title("mePROD LMM App v1.7 by S. Bozkurt @2023")
+    root.title(f"mePROD LMM App {__version__} by S. Bozkurt @2023")
     root.geometry("840x560")
     root.resizable(0, 0)
 
@@ -249,11 +264,11 @@ if __name__ == '__main__':
 
     # calculate x and y coordinates for the Tk root window
     x = (ws / 2) - (840 / 2)
-    y = (hs / 2) - (560 / 2)
+    y = (hs / 2) - (600 / 2)
 
     # set the dimensions of the screen
     # and where it is placed
-    root.geometry('%dx%d+%d+%d' % (840, 560, x, y))
+    root.geometry('%dx%d+%d+%d' % (840, 600, x, y))
 
     # root.iconphoto(False, tkinter.PhotoImage(file='icon.ico'))
     MyWindow(root)

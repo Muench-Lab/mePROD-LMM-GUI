@@ -1,7 +1,12 @@
+import time
+
 import statsmodels.formula.api as smf
 import pandas as pd
 from statsmodels.stats.multitest import multipletests
 import numpy as np
+from scipy import stats
+import math
+import statistics
 
 class Defaults:
 
@@ -166,6 +171,14 @@ class HypothesisTesting:
         roll = Rollup(self.defaults)
         protein_data = roll.protein_rollup_sum(
             input_file=input_file, channels=channels)
+
+        columnDict = {channels[i]: conditions[i] for i in range(len(channels))}
+        protein_data = protein_data.rename(columns=columnDict)
+
+        # Drop rows where the sum across the row (excluding 'index' column) is 0
+        # this is especially important because of mePROD and basal level substraction makes 0 for entire row
+        protein_data = protein_data[protein_data.sum(axis=1) != 0]
+
         # Prepare Peptide data for LMM
         Peptides_for_LM = input_file[channels]
 
@@ -274,21 +287,57 @@ class HypothesisTesting:
                 result_df_peptides_LMM = result_df_peptides_LMM.rename(columns={'fold_change': f'log2({pair[0]}/{pair[1]})',
                                                                                 'p_value': f'p_value {pair[0]}/{pair[1]}',
                                                                                 'q_value': f'q_value {pair[0]}/{pair[1]}'})
-                # Changing Column names
-
-
-
-
-                # comparison = '_' + str(pair[1]) + '_vs_' + str(pair[0])
-                # comparison = f'{pair[0]}/{pair[1]}' #log2(6h 8mM/Cont) p_value 6h 8mM/Cont q_value 6h 8mM/Cont
-                # self.pair_names.append(comparison)
-                # print(result_df_peptides_LMM)
-                # result_df_peptides_LMM = result_df_peptides_LMM.add_suffix(
-                #     comparison)
-                # print(result_df_peptides_LMM)
 
                 protein_data = protein_data.join(result_df_peptides_LMM)
-            # self.comparison_data = self.export_comparison_strings()
 
-        # print(self.comparison_data )
         return protein_data
+
+    def ttest(self, result, conditions, pairs=None):
+        columns =  [
+            self.defaults.sequence,
+            self.defaults.MasterProteinAccession,
+            self.defaults.AbundanceColumn,
+        ]
+        self.pair_names = []
+        channels = [col for col in result.columns if columns[2] in col]
+        if channels == []:
+            channels = [col for col in result.columns if 'Abundance' in col]
+
+        # Protein level quantifications
+        roll = Rollup(self.defaults)
+        result = roll.protein_rollup_sum(
+            input_file=result, channels=channels)
+
+        columnDict = {channels[i]: conditions[i] for i in range(len(channels))}
+        result = result.rename(columns=columnDict)
+
+        # Drop rows where the sum across the row (excluding 'index' column) is 0
+        # this is especially important because of mePROD and basal level substraction makes 0 for entire row
+        result = result[result.sum(axis=1) != 0]
+
+        testType = 'unpaired'  # for only supports unpaired t test
+        allAccessions = result.index # index contatins all accessions
+
+        for pair in pairs:
+
+            # Using .str.contains() to filter columns based on pair names
+            second = result.columns[result.columns.str.contains(pair[0])]  # 8mM_D-ala
+            first = result.columns[result.columns.str.contains(pair[1])]  # Control
+
+            for accession in allAccessions:
+                list1 = result.loc[accession, first[0]].values.tolist() # first[0] is the repeating name so we need to take the first one
+                list2 = result.loc[accession, second[0]].values.tolist() # first[1] is the repeating name so we need to take the first one
+                result.loc[accession, f'Log2({pair[0]}/{pair[1]})'] = math.log(
+                    float(statistics.mean(list2)) / float(statistics.mean(list1)), 2)
+
+                if testType == 'unpaired':
+                    result.loc[accession, f'pvalue({pair[0]}/{pair[1]})'] = float(
+                        stats.ttest_ind(list2, list1, equal_var=True)[1])
+                    result.loc[accession, f'-Log10 pvalue({pair[0]}/{pair[1]})'] = -math.log(
+                        float(stats.ttest_ind(list2, list1, equal_var=True)[1]),
+                        10)
+                else:
+                    result.loc[accession, f'-Log10 pvalue({pair[0]}/{pair[1]})'] = -math.log(
+                        float(stats.ttest_rel(list2, list1)[1]), 10)
+
+        return result
