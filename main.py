@@ -3,7 +3,7 @@ __version__ = "v1.9"
 __maintainer__ = "Süleyman Bozkurt"
 __email__ = "sbozkurt.mbg@gmail.com"
 __date__ = '18.01.2022'
-__update__ = '17.08.2023'
+__update__ = '09.09.2023'
 
 # import time
 # import pandas as pd
@@ -186,6 +186,10 @@ class MyWindow():
         condtionsFile.write(self.conditions)
         condtionsFile.close()
 
+        condtionsFile = open('condtions.txt','w')
+        condtionsFile.write(self.conditions)
+        condtionsFile.close()
+        
         conditionsFinal = self.conditions.split(',')
         conditionsFinal[-1] = conditionsFinal[-1].strip()
 
@@ -196,6 +200,10 @@ class MyWindow():
         pairsFile.write(self.pairs)
         pairsFile.close()
 
+        pairsFile = open('pairs.txt','w')
+        pairsFile.write(self.pairs)
+        pairsFile.close()
+        
         pairsFinal = self.pairs.split(';')
         pairsFinal[-1] = pairsFinal[-1].strip()
         pairsFinal = [i.strip() for i in pairsFinal]
