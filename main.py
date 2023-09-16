@@ -1,13 +1,12 @@
 __author__ = "Süleyman Bozkurt"
-__version__ = "v1.9"
+__version__ = "v2.0"
 __maintainer__ = "Süleyman Bozkurt"
 __email__ = "sbozkurt.mbg@gmail.com"
 __date__ = '18.01.2022'
-__update__ = '17.08.2023'
+__update__ = '16.09.2023'
 
-# import time
-# import pandas as pd
 import os
+import time
 from threading import Thread
 from tkinter import *
 from tkinter.font import Font
@@ -15,6 +14,11 @@ from tkinter.scrolledtext import ScrolledText
 from tkinter import filedialog, messagebox
 from functions import *
 from tkinter import END,Tk,Frame,Label,Button,StringVar
+from openpyxl import Workbook
+import openpyxl.styles as sty
+from datetime import datetime
+import re
+import random
 
 class MyWindow():
     def __init__(self, parent):
@@ -165,16 +169,91 @@ class MyWindow():
         self.myThread.start()
         root.after(1000, self.check_main_thread)
 
+    # def timer(self):
+    #     def wrapper(*args, **kwargs):
+    #         start_time = time.time()
+    #         result = self(*args, **kwargs)
+    #         end_time = time.time()
+    #         elapsed_time = (end_time - start_time) / 60  # in minutes
+    #         print(f"'{self.__name__}' function took {elapsed_time:.2f} minutes to run.")
+    #         return result
+    #     return wrapper
+
+    def reportAndExport(self, details, data, outputLocation):
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Info"
+
+        # Given program title
+        program_title = f"mePROD LMM App {__version__} by S. Bozkurt @2023"
+
+        # Moving program title to the top
+        # ws.merge_cells('H1:I1')
+        ws['H1'] = program_title
+        ws['H1'].font = sty.Font(size=18, bold=True, color="0072BB")
+        ws['H1'].alignment = sty.Alignment(horizontal="center", vertical="center")
+
+        # Splitting the details between columns H and I
+        details_split = [(key, value) for key, value in details.items()]
+
+        # Adding the details starting from cell H3
+        for index, (label, value) in enumerate(details_split, start=3):
+            ws.cell(row=index, column=8, value=label).alignment = sty.Alignment(horizontal="right")
+            ws.cell(row=index, column=8).font = sty.Font(size=16)
+            ws.cell(row=index, column=9, value=value).alignment = sty.Alignment(horizontal="left")
+            ws.cell(row=index, column=9).font = sty.Font(size=16)
+
+        # Current date
+        current_date = datetime.now().strftime('%Y-%m-%d')
+
+        # Adding "Date" and "Processed by" details
+        ws["H16"] = "Date:"
+        ws["H16"].alignment = sty.Alignment(horizontal="right")
+        ws["H16"].font = sty.Font(size=16)
+        ws["I16"] = current_date
+        ws["I16"].font = sty.Font(size=16)
+
+        ws["H17"] = "Processed by:"
+        ws["H17"].alignment = sty.Alignment(horizontal="right")
+        ws["H17"].font = sty.Font(size=16)
+        ws["I17"] = f"User {os.getlogin()}"
+        ws["I17"].font = sty.Font(size=16)
+
+        # Add results to a new sheet
+        ws_results = wb.create_sheet("Results")
+
+        # Define the font and alignment for the headers
+        header_font = sty.Font(bold=True, size=13)
+        center_alignment = sty.Alignment(horizontal='center', vertical='center')
+
+        # Write the column headers
+        for c_idx, col_name in enumerate(data.columns, 1):
+            cell = ws_results.cell(row=1, column=c_idx, value=col_name)
+            cell.font = header_font
+            cell.alignment = center_alignment
+
+        # Write the data rows
+        for r_idx, row in enumerate(data.iterrows(), 2):  # Start from the second row since headers are in the first row
+            for c_idx, value in enumerate(row[1], 1):
+                ws_results.cell(row=r_idx, column=c_idx, value=value)
+
+        # Specify the path where you'd like to save this workbook
+        wb.save(outputLocation)
+
+        return outputLocation
+
+    # @timer # timer decorator for engine function to calculate how long it takes to run!
     def engine(self):
         try:
-            self.update_status_box(f'\n The file is reading..! \n')
             if '.xlsx' in self.filenamePretify:
                 self.fileRead = pd.read_excel(self.outputLocationPath+self.filenamePretify)
             elif '.txt' in self.filenamePretify:
                 self.fileRead = pd.read_csv(self.outputLocationPath+self.filenamePretify,sep='\t',header=0)
+            self.update_status_box(f'\n The file is reading..! \n')
         except Exception as e:
-            self.update_status_box(f'\n Error is "{e}"! \n')
+            self.update_status_box(f'\n Please choose a file before run! \n')
             self.Message('Error!', 'An Error Occured, please choose a file before run!')
+            self.runbutton.configure(state='normal')
             return 0
 
         self.update_status_box(f'\n The file is read! \n')
@@ -186,6 +265,10 @@ class MyWindow():
         condtionsFile.write(self.conditions)
         condtionsFile.close()
 
+        condtionsFile = open(f'condtions.txt', 'w') # save the new conditions file to the same directory with the script
+        condtionsFile.write(self.conditions)
+        condtionsFile.close()
+
         conditionsFinal = self.conditions.split(',')
         conditionsFinal[-1] = conditionsFinal[-1].strip()
 
@@ -193,6 +276,10 @@ class MyWindow():
         self.pairs = self.pairsbox.get("1.0", END)
 
         pairsFile = open(f'{self.outputLocationPath}/pairs.txt','w')
+        pairsFile.write(self.pairs)
+        pairsFile.close()
+
+        pairsFile = open(f'pairs.txt', 'w') # save the new pairs file to the same directory with the script
         pairsFile.write(self.pairs)
         pairsFile.close()
 
@@ -215,14 +302,21 @@ class MyWindow():
 
         self.update_status_box(f'\n Running..! \n')
 
-        mePROD_class = mePROD(self.outputLocationPath)
-
-        self.data = mePROD_class.engine(self.fileRead, conditionsFinal, pairsFinal, normalization_type, statistics_type)
+        try:
+            randomReportName = f'reports_{str(random.randint(1,100000))}' # random report name that will be used for the report for temporary
+            mePROD_class = mePROD(self.outputLocationPath, randomReportName)
+            self.data = mePROD_class.engine(self.fileRead, conditionsFinal, pairsFinal, normalization_type, statistics_type)
+        except Exception as e:
+            self.runbutton.configure(state='normal')
+            self.update_status_box(f'\n Error is "{e}"! \n')
+            self.Message('Error!', f'An Error Occured, please fix it and rerun or contact developer via {__email__ }!')
+            return 0
 
         try:
             if self.data == 0:
                 self.update_status_box(f'\n Error is Baseline channel! \n')
                 self.Message('Error!', 'Please provide light/baseline channel!')
+                self.runbutton.configure(state='normal')
                 return 0
         except:
             pass
@@ -236,18 +330,61 @@ class MyWindow():
             self.data.to_excel(f'{self.outputLocationPath}/{self.outputLocation.strip()}.xlsx', index=False, engine="openpyxl")
 
             self.datamePROD = pd.read_excel(f'{self.outputLocationPath}/{self.outputLocation.strip()}.xlsx')
+            
+            # this function assign and updates gene names
             self.data = mePROD_class.GeneNameEngine(self.datamePROD)
+            
+            # this function determines mitochondrial proteins from mitocarta 3.0
             self.data = mePROD_class.mito_human(self.data)
-            self.data.to_excel(f'{self.outputLocationPath}/{self.outputLocation.strip()}.xlsx', index=False,
-                               engine="openpyxl")
+            
+            # this function assign significantlly changed proteins and add + sign for significant ones p < 0.05
+            self.data = mePROD_class.significantAssig(self.data)
+            
+            # export all data to excel
+            # self.data.to_excel(f'{self.outputLocationPath}/{self.outputLocation.strip()}.xlsx', index=False,
+            #                    engine="openpyxl")
 
+            # finding back the reposts.txt file and extract the required values
+            file_path = os.path.join(self.outputLocationPath, f"{randomReportName}.txt")
+            
+            # Read the file content
+            with open(file_path, "r") as file:
+                content = file.read()
+            
+            # Extract the required values using regular expressions
+            totalPeptides = re.search(r"The number of total peptides: (\d+)", content).group(1)
+            heavyPeptides = re.search(r"The number of heavy peptides: (\d+)", content).group(1)
+            mitosHeavyPeptides = re.search(r"The number of mitochondrial heavy peptides: (\d+)", content).group(1)
+            HeavyProteins = re.search(r"The number of heavy proteins: (\d+)", content).group(1)
+            mitosHeavyProteins = re.search(r"The number of mitochondrial heavy proteins: (\d+)", content).group(1)
+
+            # Delete the file
+            os.remove(file_path)
+            details = {
+                "Version of the program:": f"{__version__}",
+                "The number of total peptides:": totalPeptides,
+                "The number of heavy peptides:": heavyPeptides,
+                "The number of mitochondrial heavy peptides:": mitosHeavyPeptides,
+                "The number of heavy proteins:": HeavyProteins,
+                "The number of mitochondrial heavy proteins:": mitosHeavyProteins,
+                "":"", # this is for empty line
+                "Input file:": self.filenamePretify.strip(),
+                "Conditions:": self.conditions.strip(),
+                "Pairs:": self.pairs.strip(),
+                "Normalization:": normalization_type.strip(),
+                "Statistics:": statistics_type.strip()
+            }
+            
+            self.reportAndExport(details, self.data, f'{self.outputLocationPath}/{self.outputLocation.strip()}.xlsx') # this function creates a report for the data
+            
             self.update_status_box(f'\n Saved as {self.outputLocation.strip()}! \n')
             self.Message('Finished!', 'Application Completed!')
             self.openbutton.configure(state='normal')
             self.runbutton.configure(state='normal')
         except Exception as e:
             self.update_status_box(f'\n Error is "{e}"! \n')
-            self.Message('Error!', 'An Error Occured, please fix it and rerun!')
+            self.Message('Error!', f'An Error Occured, please fix it and rerun or contact developer via {__email__ }!')
+            self.runbutton.configure(state='normal')
 
 if __name__ == '__main__':
 

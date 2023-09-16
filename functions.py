@@ -6,8 +6,10 @@ import pandas as pd
 warnings.filterwarnings("ignore")
 
 class mePROD:
-    def __init__(self, location):
-        self.reports = open(f'{location}/reports.txt','w+')
+    def __init__(self, location, randomReportName):
+        self.mito_database = pd.read_excel('./files/database.xlsx')
+        self.geneNameDatabase = pd.read_excel('./files/Uniprot_database_2021.xlsx')
+        self.reports = open(f'{location}/{randomReportName}.txt','w+')
         self.status = ''
 
     def engine(self, psms, conditions, pairs, normalization_type, statistics_type):
@@ -16,13 +18,15 @@ class mePROD:
         if channels == []:
             channels = [col for col in psms.columns if 'Abundance' in col]
 
+        # to remove abundances to skip (empty channels) or boosters
+        skip_terms = ['skip', 'boost', 'booster', 'mitobooster', 'wholecellbooster']
         s = 0
-        for condition in conditions: # to remove abundances to skip (empty channels)
-            if condition == 'skip':
+        for condition in conditions:
+            if condition.lower() in skip_terms:
                 psms.drop(channels[s], axis=1, inplace=True)
-            s+=1
+            s += 1
 
-        conditions = [x for x in conditions if not str(x).lower().__contains__('skip')] # to remove 'skip' from the conditions
+        conditions = [x for x in conditions if not any(term in str(x).lower() for term in skip_terms)]
 
         # we need to determine the baseline index from the conditions.
         # baselineIndex = conditions.index('baseline')
@@ -102,94 +106,106 @@ class mePROD:
         return result
 
     def GeneNameEngine(self, Data):
+        # Convert the database to a dictionary for quicker lookups
+        accession_to_gene = dict(zip(self.geneNameDatabase['Accession'], self.geneNameDatabase['Gene Symbol']))
 
-        database = pd.read_excel('./files/Uniprot_database_2021.xlsx')
-        accessionDatabase = list(database['Accession'])
-        geneNameDatabase = list(database['Gene Symbol'])
+        # Try to get the 'Master Protein Accessions' column, if not, get the 'Accession' column
+        accession = Data.get('Master Protein Accessions', Data.get('Accession', pd.Series(dtype='object')))
 
-        try:
-            accession = list(Data['Master Protein Accessions'])
-        except:
-            accession = list(Data['Accession'])
-        j = 0
-
-        for i in accession:
-            if ';' in i:
-                final = i.split(';')[0]
-            elif ' ' in i:
-                final = i.split(' ')[0]
+        # Process the Accession numbers
+        def process_accession(acc):
+            if ';' in acc:
+                return acc.split(';')[0]
+            elif ' ' in acc:
+                return acc.split(' ')[0]
             else:
-                final = i
+                return acc
 
-            if final in accessionDatabase:
-                index = accessionDatabase.index(final)
-                geneSymbol = geneNameDatabase[index]
-
+        # Fetch gene symbol
+        def get_gene_symbol(final):
+            if final in accession_to_gene:
+                return accession_to_gene[final]
             else:
                 try:
                     url = f'https://www.ebi.ac.uk/proteins/api/proteins/{final}'
                     req = requests.get(url)
                     result = req.json()
-                    geneSymbol = result['gene'][0]['name']['value']
+                    return result['gene'][0]['name']['value']
                 except:
-                    geneSymbol = ''
+                    return ''
 
-            Data.loc[j, 'Gene Symbol'] = geneSymbol
-            j += 1
+        processed_accessions = accession.apply(process_accession)
+        Data['Gene Symbol'] = processed_accessions.apply(get_gene_symbol)
 
         return Data
 
     def mito_human(self, Data):
+        # Try to get the 'Master Protein Accessions' column, if not, get the 'Accession' column
+        AccessionNum = Data.get('Master Protein Accessions', Data.get('Accession', pd.Series(dtype='object')))
 
-        try:
-            AccessionNum = list(Data['Master Protein Accessions'])
-        except:
-            AccessionNum = list(Data['Accession'])
+        # Read the database
+        MitoSymbol = set(self.mito_database['Human_Mitochondrial'])
 
-        database = pd.read_excel('./files/database.xlsx')
-        MitoSymbol = list(database['Human_Mitochondrial'])
-        j = 0
-
-        for i in AccessionNum:
-            try:
-                result = i[0:6]
-            except:
-                j += 1
-                continue
-
-            if result in MitoSymbol:
-                Data.loc[j, 'Accession new'] = result
-                Data.loc[j, 'Mitochondrial Localization'] = 'YES'
+        # Process the Accession numbers
+        def process_accession(acc):
+            if ';' in acc:
+                return acc.split(';')[0]
+            elif '-' in acc:
+                return acc.split('-')[0]
             else:
-                Data.loc[j, 'Accession new'] = result
-                Data.loc[j, 'Mitochondrial Localization'] = 'NO'
+                return acc
 
-            j += 1
+        processed_accessions = AccessionNum.apply(process_accession)
+
+        # Check if each processed accession number is in MitoSymbol
+        Data['MitoCarta3.0'] = processed_accessions.apply(lambda x: '+' if x in MitoSymbol else '')
 
         return Data
 
     def mito_count(self, Data):
-        try:
-            AccessionNum = list(Data['Master Protein Accessions'].astype(str))
-        except:
-            AccessionNum = list(Data['Accession'].astype(str))
+        # Try to get the 'Master Protein Accessions' column, if not, get the 'Accession' column
+        AccessionNum = Data.get('Master Protein Accessions', Data.get('Accession', pd.Series(dtype='object'))).astype(
+            str)
 
-        database = pd.read_excel('./files/database.xlsx')
-        MitoSymbol_List = list(database['Human_Mitochondrial'].astype(str))
-        MitoSymbol_List = sorted(MitoSymbol_List)
-        AccessionNum = sorted(AccessionNum)
-        j = 0
-        k = 1
-        for i in AccessionNum:
-            try:
-                result = i[0:6]
-                if result in MitoSymbol_List:
-                    k += 1
-            except:
-                j += 1
-                continue
+        MitoSymbol_Set = set(self.mito_database['Human_Mitochondrial'].astype(str))
+
+        # Process the Accession numbers
+        def process_accession(acc):
+            if ';' in acc:
+                return acc.split(';')[0]
+            elif '-' in acc:
+                return acc.split('-')[0]
+            else:
+                return acc
+
+        processed_accessions = AccessionNum.apply(process_accession)
+        count_mito = sum(1 for acc in processed_accessions if acc in MitoSymbol_Set)
 
         if self.status == 'heavy':
-            self.reports.write('The number of mitochondrial heavy peptides: {}\n'.format(k))
+            self.reports.write('The number of mitochondrial heavy peptides: {}\n'.format(count_mito))
         if self.status == 'protein':
-            self.reports.write('The number of mitochondrial heavy proteins: {}\n'.format(k))
+            self.reports.write('The number of mitochondrial heavy proteins: {}\n'.format(count_mito))
+
+        return
+
+    def significantAssig(self, Data):
+        # Get all columns with 'p_value' and 'q_value' in their names
+        pvalue_columns = [col for col in Data.columns if 'p_value' in col]
+        qvalue_columns = [col for col in Data.columns if 'q_value' in col]
+
+        # Iterate over the columns
+        for i in range(0, len(pvalue_columns)):
+            pcol = pvalue_columns[i]
+
+            # Create a new column name for each p_value column (e.g. 'p_value CCCP_ISRIB/CCCP < 0.05')
+            p_col_name = f'{pcol} < 0.05'
+
+            # Assign '+' to rows where p_value is less than 0.05, else assign an empty string
+            Data[p_col_name] = Data[pcol].apply(lambda x: '+' if x < 0.05 else '')
+
+            if qvalue_columns != []:
+                qcol = qvalue_columns[i]
+                q_col_name = f'{qcol} < 0.05'
+                Data[q_col_name] = Data[qcol].apply(lambda x: '+' if x < 0.05 else '')
+
+        return Data

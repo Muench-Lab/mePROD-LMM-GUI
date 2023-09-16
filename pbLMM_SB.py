@@ -331,13 +331,13 @@ class HypothesisTesting:
                     float(statistics.mean(list2)) / float(statistics.mean(list1)), 2)
 
                 if testType == 'unpaired':
-                    result.loc[accession, f'pvalue({pair[0]}/{pair[1]})'] = float(
+                    result.loc[accession, f'p_value ({pair[0]}/{pair[1]})'] = float(
                         stats.ttest_ind(list2, list1, equal_var=True)[1])
-                    result.loc[accession, f'-Log10 pvalue({pair[0]}/{pair[1]})'] = -math.log(
-                        float(stats.ttest_ind(list2, list1, equal_var=True)[1]),
-                        10)
-                else:
-                    result.loc[accession, f'-Log10 pvalue({pair[0]}/{pair[1]})'] = -math.log(
-                        float(stats.ttest_rel(list2, list1)[1]), 10)
+                    # result.loc[accession, f'-Log10 p_value ({pair[0]}/{pair[1]})'] = -math.log(
+                    #     float(stats.ttest_ind(list2, list1, equal_var=True)[1]),
+                    #     10)
+                # else:
+                #     result.loc[accession, f'-Log10 p_value({pair[0]}/{pair[1]})'] = -math.log(
+                #         float(stats.ttest_rel(list2, list1)[1]), 10)
 
         return result
