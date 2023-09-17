@@ -68,7 +68,7 @@ class mePROD:
         self.status = 'heavy'
         self.mito_count(heavy)
 
-        peptide_data = process.baseline_correction_peptide_return(heavy,threshold=5, i_baseline=baselineIndex, random=True)
+        peptide_data = process.baseline_correction_peptide_return(heavy, threshold=5, i_baseline=baselineIndex, random=True)
 
         #conditions=['Light','0DMSO','0DMSO','0DMSO','Rotenone','Rotenone','Rotenone','Antimycin','Antimycin','Antimycin','Boost']
         #pairs=[['0DMSO','Rotenone'], ['0DMSO','Antimycin']]
@@ -84,14 +84,24 @@ class mePROD:
         #print(pairs)
         if pairs == [['']]:
             pairs = None
-        #print(pairs)
 
-        hypo = statisticsGetter.HypothesisTesting()
+        if pairs != None:
+            hypo = statisticsGetter.HypothesisTesting()
+            if statistics_type == 'LMM':
+                result = hypo.peptide_based_lmm(peptide_data,conditions=conditions,pairs=pairs)
+            elif statistics_type == 'ttest':
+                result = hypo.ttest(peptide_data, conditions=conditions, pairs=pairs)
+        else:
+            roll = statisticsGetter.Rollup()
+            protein_data = roll.protein_rollup_sum(
+                input_file=peptide_data, channels=channels)
 
-        if statistics_type == 'LMM':
-            result = hypo.peptide_based_lmm(peptide_data,conditions=conditions,pairs=pairs)
-        elif statistics_type == 'ttest':
-            result = hypo.ttest(peptide_data, conditions=conditions, pairs=pairs)
+            columnDict = {channels[i]: conditions[i] for i in range(len(channels))}
+            protein_data = protein_data.rename(columns=columnDict)
+
+            # Drop rows where the sum across the row (excluding 'index' column) is 0
+            # this is especially important because of mePROD and basal level substraction makes 0 for entire row
+            result = protein_data[protein_data.sum(axis=1) != 0]
 
         result = result.rename(columns=columnDict)
         self.reports.write('The number of heavy proteins: {}\n'.format(len(result.index)))

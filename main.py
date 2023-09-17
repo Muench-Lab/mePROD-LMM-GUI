@@ -1,12 +1,11 @@
 __author__ = "Süleyman Bozkurt"
-__version__ = "v2.0"
+__version__ = "v2.1"
 __maintainer__ = "Süleyman Bozkurt"
 __email__ = "sbozkurt.mbg@gmail.com"
 __date__ = '18.01.2022'
-__update__ = '16.09.2023'
+__update__ = '17.09.2023'
 
 import os
-import time
 from threading import Thread
 from tkinter import *
 from tkinter.font import Font
@@ -290,22 +289,28 @@ class MyWindow():
         pairsFinal = [pairs.split('/') for pairs in pairsFinal]
 
         normalization_type = self.normVar.get()
-        statistics_type = self.statisticVar.get()
+        finalStatisticalMethod = self.statisticVar.get().strip()
+
+        if pairsFinal == [['']]:
+            finalStatisticalMethod = None
+            pairsFinalOutput = 'None' # just for export saying it is none
+        else:
+            pairsFinalOutput = self.pairs.strip()
 
         self.update_status_box(f'\n Conditions: {self.conditions.strip()} \n')
 
-        self.update_status_box(f'\n Pairs: {self.pairs.strip()} \n')
+        self.update_status_box(f'\n Pairs: {pairsFinalOutput} \n')
 
         self.update_status_box(f'\n Normalization: {normalization_type.strip()} \n')
 
-        self.update_status_box(f'\n Statistics: {statistics_type.strip()} \n')
+        self.update_status_box(f'\n Statistics: {str(finalStatisticalMethod).strip()} \n')
 
         self.update_status_box(f'\n Running..! \n')
 
         try:
             randomReportName = f'reports_{str(random.randint(1,100000))}' # random report name that will be used for the report for temporary
             mePROD_class = mePROD(self.outputLocationPath, randomReportName)
-            self.data = mePROD_class.engine(self.fileRead, conditionsFinal, pairsFinal, normalization_type, statistics_type)
+            self.data = mePROD_class.engine(self.fileRead, conditionsFinal, pairsFinal, normalization_type, finalStatisticalMethod)
         except Exception as e:
             self.runbutton.configure(state='normal')
             self.update_status_box(f'\n Error is "{e}"! \n')
@@ -360,6 +365,7 @@ class MyWindow():
 
             # Delete the file
             os.remove(file_path)
+
             details = {
                 "Version of the program:": f"{__version__}",
                 "The number of total peptides:": totalPeptides,
@@ -370,9 +376,9 @@ class MyWindow():
                 "":"", # this is for empty line
                 "Input file:": self.filenamePretify.strip(),
                 "Conditions:": self.conditions.strip(),
-                "Pairs:": self.pairs.strip(),
+                "Pairs:": pairsFinalOutput,
                 "Normalization:": normalization_type.strip(),
-                "Statistics:": statistics_type.strip()
+                "Statistics:": str(finalStatisticalMethod)
             }
             
             self.reportAndExport(details, self.data, f'{self.outputLocationPath}/{self.outputLocation.strip()}.xlsx') # this function creates a report for the data

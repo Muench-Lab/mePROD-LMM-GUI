@@ -1,3 +1,4 @@
+outputname:
 SB117_import_lmm_test
 
 condtions:
