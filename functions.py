@@ -1,6 +1,6 @@
 import warnings
 import DynaTMT_SB as DynaTMT
-import pbLMM_SB as statisticsGetter
+import PBLMM as statisticsGetter
 import requests
 import pandas as pd
 warnings.filterwarnings("ignore")
@@ -45,30 +45,38 @@ class mePROD:
         else:
             return 0
 
-        process = DynaTMT.PD_input(psms)
-        # process.IT_adjustment()
+        # initialize the class with input data
+
+        process = DynaTMT.PD_input()
+
+        filtered_peptides = process.filter_peptides(
+            psms)  # filter peptides before total intensity normalisation 19062023
+
+        ITadjusted_peptides = process.IT_adjustment(filtered_peptides)
+
+        self.reports.write('The number of total peptides: {}\n'.format(len(ITadjusted_peptides.index)))
+
         # process.total_intensity_normalisation()
         # process.filter_peptides() # earlier filter peptides after total intensity normalisation
-        process.IT_adjustment()
-        process.filter_peptides() # filter peptides before total intensity normalisation 19062023
 
+        # the reason for filter peptieds before normalization is that we normalize what we are going to use
+
+        normFinal = ''
         if normalization_type == 'total':
-            process.total_intensity_normalisation()
+            normFinal = process.total_intensity_normalisation(ITadjusted_peptides)
         elif normalization_type == 'TMM':
-            process.TMM()
+            normFinal = process.TMM(ITadjusted_peptides)
         elif normalization_type == 'median':
-            process.Median_normalisation()
+            normFinal = process.Median_normalisation(ITadjusted_peptides)
 
-        self.reports.write('The number of total peptides: {}\n'.format(len(psms.index)))
-
-        heavy = process.extract_heavy()
+        heavy = process.extract_heavy(normFinal)
 
         self.reports.write('The number of heavy peptides: {}\n'.format(len(heavy.index)))
 
         self.status = 'heavy'
         self.mito_count(heavy)
 
-        peptide_data = process.baseline_correction_peptide_return(heavy, threshold=5, i_baseline=baselineIndex, random=True)
+        peptide_data = process.baseline_correction(heavy, threshold=5, i_baseline=baselineIndex, random=True)
 
         #conditions=['Light','0DMSO','0DMSO','0DMSO','Rotenone','Rotenone','Rotenone','Antimycin','Antimycin','Antimycin','Boost']
         #pairs=[['0DMSO','Rotenone'], ['0DMSO','Antimycin']]
@@ -113,6 +121,15 @@ class mePROD:
         self.mito_count(result)
 
         self.reports.close()
+
+        # some numbers
+        print(f"# of PSMs: {len(psms.index)}")
+        print(f"# of filtered PSMs: {len(filtered_peptides.index)}")
+        print(f"# of IT adjusted peptides: {len(ITadjusted_peptides.index)}")
+        print(f"# of normalized peptides: {len(normFinal.index)}")
+        print(f"# of heavy peptides: {len(heavy.index)}")
+        print(f"# of baseline corrected peptides: {len(peptide_data.index)}")
+
         return result
 
     def GeneNameEngine(self, Data):

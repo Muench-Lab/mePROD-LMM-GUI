@@ -1,9 +1,9 @@
 __author__ = "Süleyman Bozkurt"
-__version__ = "v2.1"
+__version__ = "v2.2"
 __maintainer__ = "Süleyman Bozkurt"
 __email__ = "sbozkurt.mbg@gmail.com"
 __date__ = '18.01.2022'
-__update__ = '17.09.2023'
+__update__ = '22.10.2023'
 
 import os
 from threading import Thread
