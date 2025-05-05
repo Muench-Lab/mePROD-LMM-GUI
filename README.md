@@ -5,7 +5,9 @@ A graphical user interface for analyzing proteomics data using linear mixed mode
 ## Versions
 
 mePROD-LMM-GUI @2.2.0 (2023-10-22)
+
 DynaTMT-py-SB version @2.6.0 - 2023-10-05 (not-up-to-date)
+
 PBLMM @2.1.1 - 2023-10-23 (up-to-date)
 
 ## Overview  
